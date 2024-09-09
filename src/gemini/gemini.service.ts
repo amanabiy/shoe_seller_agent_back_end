@@ -6,6 +6,10 @@ import { CartsService } from 'src/carts/carts.service';
 
 import { recommendShoesFunctionDeclaration } from 'src/shoe/entities/recommended.function.declaration';
 import { addItemToCartFunctionDeclaration } from 'src/carts/function_description/addItemToCartFunctionDeclaration';
+import { User } from 'src/users/entities/user.entity';
+import { getItemsInCartFunctionDeclaration } from 'src/carts/function_description/getItemsInCartFunctionDescription';
+import { empty } from 'rxjs';
+import { emptyCartFunctionDeclaration } from 'src/carts/function_description/emptyCartItemsFunctionDescription';
 
 @Injectable()
 export class GeminiService {
@@ -14,9 +18,13 @@ export class GeminiService {
     private readonly logger = new Logger(GeminiService.name);
     private readonly chatSessions = new Map<string, any>(); // Store chat sessions by sessionId
     private functions = {
-        recommendShoes: async (args: any) => this.shoeService.filterShoes(args),
-        addItemToCart: async (args: any) => this.cartService.addItemToCart(args.userId, args.shoeId, args.quantity),
-        // Add more functions here as needed
+        recommendShoes: async (args: any) => {
+            delete args.user;
+            return this.shoeService.filterShoes(args)
+        },
+        addItemToCart: async (args: any) => this.cartService.addItemToCart(args.user.id, args.shoeId, args.quantity),
+        getItemsInCart: async (args: any) => this.cartService.getItemsInCart(args.user.id),
+        emptyCart: async (args: any) => this.cartService.emptyCart(args.user.id),
     };
 
     constructor(private shoeService: ShoeService, private cartService: CartsService) {
@@ -52,12 +60,14 @@ export class GeminiService {
         if (!this.chatSessions.has(sessionId)) {
             const model = this.genAIClient.getGenerativeModel({
                 model: 'gemini-1.5-flash',
-                systemInstruction: "You are a helpful and knowledgeable shoe seller agent. Assist the customer with any inquiries they have about shoes, including styles, sizes, colors, availability, giving recommendations, adding items to the cart, and removing items from the cart. Don't make assumptions for shoe if you can't find it on the database say so. Don't assume anything about the user, if the user doesn't have an Id ask the user to login",
+                systemInstruction: "You are a helpful and knowledgeable shoe seller agent. Assist the customer with any inquiries they have about shoes, including styles, sizes, colors, availability, giving recommendations, adding items to the cart, and removing items from the cart. Don't make assumptions for shoe if you can't find it on the database say so. userId is passed automatically by the system don't worry about it. Don't assume any Id for the shoes, make sure to search the database according to the functions given.",
                 
                 tools: {
                     functionDeclarations: [
                         recommendShoesFunctionDeclaration,
                         addItemToCartFunctionDeclaration,
+                        getItemsInCartFunctionDeclaration,
+                        emptyCartFunctionDeclaration,
                     ],
                 } as any,
             });
@@ -70,7 +80,7 @@ export class GeminiService {
         return this.chatSessions.get(sessionId);
     }
 
-    async sendMessage(sessionId: string, userMessage: string): Promise<string> {
+    async sendMessage(user: User, sessionId: string, userMessage: string): Promise<string> {
         try {
             const chat = await this.getOrCreateChat(sessionId);
             const result = await chat.sendMessage(userMessage);
@@ -81,7 +91,8 @@ export class GeminiService {
 
             if (call) {
                 // If there is a function call, execute it
-                console.log(`Calling function: ${call.name} with arguments:`, call.args);
+                call.args.user = user;
+                console.log(`Calling function: ${call.name} with arguments:`, call.args, );
                 const functionToCall = this.functions[call.name];
                 if (functionToCall) {
                     const apiResponse = await functionToCall(call.args);
@@ -108,7 +119,7 @@ export class GeminiService {
                 return result.response.text();
             }
         } catch (error) {
-            this.logger.error('Failed to generate chat response', error.stack);
+            this.logger.error('Failed to generate chat response', error);
             throw new Error('Chat response generation failed. Please try again later.');
         }
     }

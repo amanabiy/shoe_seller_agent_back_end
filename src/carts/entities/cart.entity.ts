@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'ty
 import { IsInt, IsNumber } from 'class-validator';
 import { Shoe } from 'src/shoe/entities/shoe.entity';
 
-@Entity()
+@Entity('cart')
 export class Cart {
   @PrimaryGeneratedColumn()
   id: number;
@@ -15,7 +15,7 @@ export class Cart {
   items: CartItem[];
 }
 
-@Entity()
+@Entity('cart_items')
 export class CartItem {
   @PrimaryGeneratedColumn()
   id: number;

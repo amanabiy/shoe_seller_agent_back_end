@@ -1,5 +1,7 @@
-import { Controller, Get, Query, HttpException, HttpStatus, Post, Body } from '@nestjs/common';
+import { Controller, Get, Query, HttpException, HttpStatus, Post, Body, UseGuards } from '@nestjs/common';
 import { GeminiService } from './gemini.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 
 @Controller('gemini')
 export class GeminiController {
@@ -23,12 +25,16 @@ export class GeminiController {
     }
   }
 
+  
   @Post('chat')
+  @UseGuards(JwtAuthGuard)
   async sendMessage(
+    @CurrentUser() user: any, // Extract user using the CurrentUser decorator
     @Body('sessionId') sessionId: string,
     @Body('message') message: string,
   ): Promise<{ response: string }> {
-    const response = await this.geminiService.sendMessage(sessionId, message);
+    console.log('user', user);
+    const response = await this.geminiService.sendMessage(user, sessionId, message);
     return { response };
   }
 }
