@@ -7,9 +7,10 @@ import { Shoe } from 'src/shoe/entities/shoe.entity';
 import { ShoeService } from 'src/shoe/shoe.service';
 import { CartsService } from 'src/carts/carts.service';
 import { Cart, CartItem } from 'src/carts/entities/cart.entity';
+import { MailerModule } from 'src/mailer/mailer.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Shoe, Cart, CartItem])],
+  imports: [TypeOrmModule.forFeature([Shoe, Cart, CartItem]), MailerModule],
   controllers: [GeminiController],
   providers: [GeminiService, ShoeService, CartsService],
 })

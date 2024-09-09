@@ -10,6 +10,7 @@ import { User } from 'src/users/entities/user.entity';
 import { getItemsInCartFunctionDeclaration } from 'src/carts/function_description/getItemsInCartFunctionDescription';
 import { empty } from 'rxjs';
 import { emptyCartFunctionDeclaration } from 'src/carts/function_description/emptyCartItemsFunctionDescription';
+import { orderAllItemsInCartFunctionDeclaration } from 'src/carts/function_description/orderAllItemsInCartFunctionDeclaration';
 
 @Injectable()
 export class GeminiService {
@@ -25,6 +26,7 @@ export class GeminiService {
         addItemToCart: async (args: any) => this.cartService.addItemToCart(args.user.id, args.shoeId, args.quantity),
         getItemsInCart: async (args: any) => this.cartService.getItemsInCart(args.user.id),
         emptyCart: async (args: any) => this.cartService.emptyCart(args.user.id),
+        orderAllItemsInCart: async (args: any) => this.cartService.orderAllItemsInCart(args.user),
     };
 
     constructor(private shoeService: ShoeService, private cartService: CartsService) {
@@ -68,6 +70,7 @@ export class GeminiService {
                         addItemToCartFunctionDeclaration,
                         getItemsInCartFunctionDeclaration,
                         emptyCartFunctionDeclaration,
+                        orderAllItemsInCartFunctionDeclaration,
                     ],
                 } as any,
             });

@@ -3,24 +3,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart, CartItem } from './entities/cart.entity';
 import { Shoe } from 'src/shoe/entities/shoe.entity';
+import { MailerService } from 'src/mailer/mailer.service';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class CartsService {
   constructor(
+    private mailerService: MailerService,
     @InjectRepository(Cart) private cartRepository: Repository<Cart>,
     @InjectRepository(CartItem) private cartItemRepository: Repository<CartItem>,
     @InjectRepository(Shoe) private shoeRepository: Repository<Shoe>,
   ) {}
 
   async addItemToCart(userId: number, shoeId: number, quantity: number): Promise<any> {
-    console.log("addItemToCart is called with", userId, shoeId, quantity);
-  
-    // Check for valid quantity
     if (quantity <= 0) {
       throw new Error('Quantity must be greater than zero');
     }
   
-    // Fetch the cart for the user or create a new one if it doesn't exist
     let cart = await this.cartRepository.findOne({
       where: { userId },
       relations: ['items', 'items.shoe'] // Ensure relations are loaded
@@ -31,22 +30,17 @@ export class CartsService {
       cart = await this.cartRepository.save(cart);
     }
 
-  
-    // Fetch the shoe
     const shoe = await this.shoeRepository.findOneBy({ id: shoeId });
     if (!shoe) {
       throw new Error('Shoe not found');
     }
   
-    // Find existing cart item or create a new one
     let existingCartItem = cart.items.find(item => item.shoe.id === shoeId);
   
     if (existingCartItem) {
-      // Update existing cart item
       existingCartItem.quantity += quantity;
       existingCartItem.totalPrice = existingCartItem.quantity * existingCartItem.price;
       
-      // Save the updated cart item
       try {
         await this.cartItemRepository.save(existingCartItem);
       } catch (error) {
@@ -124,35 +118,32 @@ export class CartsService {
     }
   }
 
-  // async addItemsToCart(userId: number, items: { shoeId: number, quantity: number }[]): Promise<Cart> {
-  //   let cart = await this.cartRepository.findOne({ where: { userId }, relations: ['items'] });
+  async orderAllItemsInCart(user: User): Promise<void> {
+    const userId = user.id;
+    const cartData = await this.getItemsInCart(userId);
+    const cartItems = cartData.items;
+
+    const totalPrice = cartItems.reduce((total, item) => total + item.totalPrice, 0);
+
+    const paymentLink = this.generatePaymentLink(user, totalPrice);
+
+    const itemList = cartItems.map(item => 
+      `Shoe ID: ${item.shoe.id}, Name: ${item.shoe.brand} ${item.shoe.modelName}, Quantity: ${item.quantity}, Total Price: ${item.totalPrice}`
+    ).join('\n');
+
+    const emailText = 
+      `Hello,\n\n` +
+      `Here are the items in your cart:\n` +
+      `${itemList}\n\n` +
+      `Total Price: ${totalPrice}\n\n` +
+      `Here is your payment link: ${paymentLink}\n\n` +
+      `Thank you!`;
     
-  //   if (!cart) {
-  //     cart = this.cartRepository.create({ userId, items: [] });
-  //   }
+    await this.mailerService.sendPaymentLink(user.email, paymentLink, emailText);
+  }
 
-  //   for (const item of items) {
-  //     const shoe = await this.shoeRepository.findOne({id: item.shoeId} as any);
-  //     if (!shoe) {
-  //       throw new Error(`Shoe with ID ${item.shoeId} not found`);
-  //     }
 
-  //     const existingCartItem = cart.items.find(cartItem => cartItem.shoe.id === item.shoeId);
-  //     if (existingCartItem) {
-  //       existingCartItem.quantity += item.quantity;
-  //       existingCartItem.totalPrice = existingCartItem.quantity * existingCartItem.price;
-  //     } else {
-  //       const cartItem = this.cartItemRepository.create({
-  //         cart,
-  //         shoe,
-  //         quantity: item.quantity,
-  //         price: shoe.price,
-  //         totalPrice: shoe.price * item.quantity,
-  //       });
-  //       cart.items.push(cartItem);
-  //     }
-  //   }
-
-  //   return this.cartRepository.save(cart);
-  // }
+  generatePaymentLink(user, totalPrice) {
+    return `https://example.com/pay?total=${totalPrice}`;
+  }
 }

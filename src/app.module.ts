@@ -10,11 +10,11 @@ import { GeminiModule } from './gemini/gemini.module';
 import { UserModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './users/entities/user.entity';
+import { MailerModule } from './mailer/mailer.module';
 
 @Module({
   imports: [
-    // UsersModule,
-     ShoeModule, CartsModule, GeminiModule,
+    ShoeModule, CartsModule, GeminiModule,
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.MYSQL_HOST,
@@ -24,10 +24,11 @@ import { User } from './users/entities/user.entity';
       database: process.env.MYSQL_DATABASE,
       entities: [Shoe, Cart, CartItem, User
       ],
-      synchronize: true, // Set to false in production and use migrations
+      synchronize: process.env.ENV != "production", // Set to false in production and use migrations
     }),
     AuthModule,
     UserModule,
+    MailerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
