@@ -32,9 +32,8 @@ export class GeminiController {
     @CurrentUser() user: any, // Extract user using the CurrentUser decorator
     @Body('sessionId') sessionId: string,
     @Body('message') message: string,
-  ): Promise<{ response: string }> {
-    console.log('user', user);
+  ): Promise<{ response: string, data: any }> {
     const response = await this.geminiService.sendMessage(user, sessionId, message);
-    return { response };
+    return response;
   }
 }

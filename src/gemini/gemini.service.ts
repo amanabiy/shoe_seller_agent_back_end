@@ -58,11 +58,27 @@ export class GeminiService {
         }
     }
 
+    getSystemInstruction(): string {
+        const systemInstruction = "You are a helpful and knowledgeable shoe seller agent.";
+        const assistCustomer = "Assist the customer with any inquiries they have about shoes, including styles, sizes, colors, availability, giving recommendations, adding items to the cart, and removing items from the cart.";
+        const databaseInstruction = "Don't make assumptions for shoe if you can't find it on the database say so. userId and Email is passed automatically by the system don't worry about it. Don't assume any Id for the shoes, make sure to search the database according to the functions given.";
+        const cartManagement = "After every shoe the user wants is added make sure to ask if they would like to order what they have in the cart. Then order all the items in the cart, and send payment link for the user.";
+        const filteringInstruction = "You can also filter by range if it is a number check the function description for that.";
+      
+        return [
+          systemInstruction,
+          assistCustomer,
+          databaseInstruction,
+          cartManagement,
+          filteringInstruction,
+        ].join(' ');
+      }
+
     private getOrCreateChat(sessionId: string) {
         if (!this.chatSessions.has(sessionId)) {
             const model = this.genAIClient.getGenerativeModel({
                 model: 'gemini-1.5-flash',
-                systemInstruction: "You are a helpful and knowledgeable shoe seller agent. Assist the customer with any inquiries they have about shoes, including styles, sizes, colors, availability, giving recommendations, adding items to the cart, and removing items from the cart. Don't make assumptions for shoe if you can't find it on the database say so. userId is passed automatically by the system don't worry about it. Don't assume any Id for the shoes, make sure to search the database according to the functions given.",
+                systemInstruction: this.getSystemInstruction(),
                 
                 tools: {
                     functionDeclarations: [
@@ -83,7 +99,7 @@ export class GeminiService {
         return this.chatSessions.get(sessionId);
     }
 
-    async sendMessage(user: User, sessionId: string, userMessage: string): Promise<string> {
+    async sendMessage(user: User, sessionId: string, userMessage: string): Promise<any> {
         try {
             const chat = await this.getOrCreateChat(sessionId);
             const result = await chat.sendMessage(userMessage);
@@ -99,7 +115,7 @@ export class GeminiService {
                 const functionToCall = this.functions[call.name];
                 if (functionToCall) {
                     const apiResponse = await functionToCall(call.args);
-                    console.log("apiResponse", apiResponse);
+                    // console.log("apiResponse", apiResponse);
                     
                     // Send the API response back to the model so it can generate
                     // a text response that can be displayed to the user.
@@ -112,14 +128,14 @@ export class GeminiService {
         
                     // Log and return the text response from the chat
                     console.log(result2.response.text());
-                    return result2.response.text();
+                    return { response: result2.response.text(), data: apiResponse };
                 } else {
                     throw new Error(`Function ${call.name} is not defined.`);
                 }
             } else {
                 // If there is no function call, simply return the chat response
                 console.log(result.response.text());
-                return result.response.text();
+                return { response: result.response.text(), data: {}};
             }
         } catch (error) {
             this.logger.error('Failed to generate chat response', error);
