@@ -11,9 +11,5 @@ export const emptyCartFunctionDeclaration = {
       },
       required: ["userId"],
     },
-    returns: {
-      type: "VOID",
-      description: "This function does not return any value.",
-    },
   };
   
