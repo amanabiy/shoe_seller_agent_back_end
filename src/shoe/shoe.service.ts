@@ -56,7 +56,7 @@ export class ShoeService {
     topPositiveReview?: string;
     topNegativeReview?: string;
   }): Promise<any> {
-    const queryOptions: any = {};
+    let queryOptions: any = [];
 
     // Define and apply string filters
     const stringFilters = [
@@ -67,7 +67,7 @@ export class ShoeService {
 
     stringFilters.forEach(field => {
       if (filters[field] !== undefined) {
-        queryOptions[field] = filters[field];
+        queryOptions.push({field: filters[field]});
       }
     });
 
@@ -84,7 +84,7 @@ export class ShoeService {
     numberRangeFilters.forEach(field => {
       if (filters[field] !== undefined) {
         console.log("field", field);
-        Object.assign(queryOptions, buildRangeFilter(field, filters[field]));
+        queryOptions = [...queryOptions, ...buildRangeFilter(field, filters[field])];
       }
     });
 
@@ -122,6 +122,6 @@ export class ShoeService {
       where: queryOptions,
     });
 
-    return { "data": results, "text": "Shoes filtered successfully" };
+    return { "filtered_shoes": results, "text": "Shoes filtered successfully" };
   }
 }
